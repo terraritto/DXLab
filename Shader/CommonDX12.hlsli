@@ -39,6 +39,7 @@ struct ShaderParameter
 struct SceneShadowParameter
 {
     float4x4 LVP;
+    float offset;
 };
 
 // ShadowMapŠÖŒW

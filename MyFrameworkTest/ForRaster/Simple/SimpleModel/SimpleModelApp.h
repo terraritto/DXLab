@@ -32,6 +32,7 @@ public:
 	struct SceneShadowParameters
 	{
 		XMFLOAT4X4 LVP;
+		float offset = 0.1f;
 	};
 
 	struct ShadowParameters
@@ -43,7 +44,7 @@ public:
 
 protected:
 	std::unique_ptr<DefaultMeshLoader> m_meshLoader;
-	std::wstring m_fileName;
+	std::wstring m_fileName, m_modelName;
 
 	DXUTILITY::Camera m_camera; // ÉJÉÅÉâ
 	

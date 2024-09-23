@@ -299,11 +299,11 @@ void SimpleModelApp::Update(double DeltaTime)
 	// Shadow
 	ImGui::Begin("Shadow");
 	{
-		ImGui::SliderFloat3("pos", m_shadowCamera.GetPosition().m128_f32, 0.0f, 2000.0f);
+		ImGui::SliderFloat3("pos", m_shadowCamera.GetPosition().m128_f32, 0.0f, 100.0f);
 		ImGui::SliderFloat("distance", &m_device->m_global->lightDistance, 1000.0f, 10000.0);
 
 		ImGui::Text("ShadowMap:");
-		ImGui::Image((ImTextureID)(m_shadowMap->GetOutputDepthDescriptor()->m_gpuHandle.ptr), ImVec2(300, 300));
+		ImGui::Image((ImTextureID)(m_shadowMap->GetOutputDescriptor()->m_gpuHandle.ptr), ImVec2(300, 300));
 
 		// 更新
 		auto pos = m_shadowCamera.GetPosition();
@@ -410,7 +410,14 @@ void SimpleModelApp::SetupMesh()
 	// meshを用意
 	m_meshLoader = std::make_unique<DefaultMeshLoader>();
 	m_fileName = L"Mesh/SimpleSponza/sponza.obj";
+	m_modelName = L"Mesh/mitsuba/mitsuba-sphere.obj";
+	;
 	if (m_meshLoader->LoadMesh(m_device, m_fileName) == false)
+	{
+		throw std::runtime_error("Failed Initialize Mesh.");
+	}
+
+	if (m_meshLoader->LoadMesh(m_device, m_modelName) == false)
 	{
 		throw std::runtime_error("Failed Initialize Mesh.");
 	}
@@ -460,11 +467,13 @@ void SimpleModelApp::SetupBuffer()
 
 void SimpleModelApp::SetupShadowMap()
 {
+	auto format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+
 	// ShadowMap用のRenderTargetを用意
 	m_shadowMap = std::make_unique<ResultBuffer>();
 
 	DirectX::XMVECTORF32 clearColor = { 1.0f,1.0f,1.0f,1.0f };
-	m_shadowMap->Initialize(m_device.get(), GetWidth(), GetHeight(), DXGI_FORMAT_R8G8B8A8_UNORM, clearColor);
+	m_shadowMap->Initialize(m_device.get(), GetWidth(), GetHeight(), format, clearColor);
 
 	// DescriptorRangeとRootParamを生成
 	CD3DX12_DESCRIPTOR_RANGE sceneCB;
@@ -492,7 +501,8 @@ void SimpleModelApp::SetupShadowMap()
 
 	// PSOの生成
 	m_shadowMapPSO.SetVSByte(L"SimpleShadowVS.dxlib");
-	//m_shadowMapPSO.SetPSByte(L"SimpleShadowPS.dxlib");
+	m_shadowMapPSO.SetPSByte(L"SimpleShadowPS.dxlib");
+	m_shadowMapPSO.SetRTVFormat(0, format);
 	m_shadowMapPSO.SetCullMode(D3D12_CULL_MODE_NONE);
 	m_shadowMapPSO.IsDepthClip(true);
 	m_shadowMapPSO.SetRootSignature(m_shadowMapRS);
@@ -545,7 +555,7 @@ void SimpleModelApp::RenderToShadow()
 
 	// 描画先をセット
 	m_commandList->OMSetRenderTargets(
-		0, nullptr, FALSE, &m_shadowMap->GetOutputDSVDescriptor()->m_cpuHandle);
+		1, &m_shadowMap->GetOutputRTVDescriptor()->m_cpuHandle, FALSE, &m_shadowMap->GetOutputDSVDescriptor()->m_cpuHandle);
 
 	// 各行列をセットしていく
 	ShadowParameters shaderParams;
@@ -578,7 +588,7 @@ void SimpleModelApp::RenderToShadow()
 
 	// 一気にmeshを描いていく
 	{
-		auto meshList = MeshPool::GetInstance().GetMesh(m_fileName);
+		auto meshList = MeshPool::GetInstance().GetMesh(m_modelName);
 		if (meshList != nullptr)
 		{
 			// PSOのセット
@@ -588,10 +598,6 @@ void SimpleModelApp::RenderToShadow()
 			{
 				auto& material = MaterialManager::GetInstance().GetMaterial(mesh->m_materialId);
 				DefaultMeshMaterial* meshMat = static_cast<DefaultMeshMaterial*>(material.get());
-				if (meshMat->GetColorTextureName().find(L"pole") == std::wstring::npos)
-				{
-					continue;
-				}
 
 				// Primitiveのセット
 				m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -665,6 +671,7 @@ void SimpleModelApp::RenderToTexture()
 
 		auto lightVP = m_shadowCamera.GetViewMatrix() * m_shadowCamera.GetProjectionMatrix();
 		DirectX::XMStoreFloat4x4(&sceneShadowParams.LVP, lightVP);
+		sceneShadowParams.offset = 1.0f/1024.0f; // @todo: 設定パラメータは持たせる
 
 		void* p = m_sceneShadowCB.Map(frameIndex);
 		memcpy(p, &sceneShadowParams, sizeof(SceneShadowParameters));
@@ -705,9 +712,43 @@ void SimpleModelApp::RenderToTexture()
 	// 一気にmeshを描いていく
 	{
 		auto meshList = MeshPool::GetInstance().GetMesh(m_fileName);
+		auto modelList = MeshPool::GetInstance().GetMesh(m_modelName);
+
 		if (meshList != nullptr)
 		{
 			for (auto mesh : *meshList)
+			{
+				auto& material = MaterialManager::GetInstance().GetMaterial(mesh->m_materialId);
+				DefaultMeshMaterial* meshMat = static_cast<DefaultMeshMaterial*>(material.get());
+
+				// PSOのセット
+				m_commandList->SetPipelineState(meshMat->GetIsAlpha() ? m_AlphaPsoContainer.GetPSO().Get() : m_psoContainer.GetPSO().Get());
+
+				// Primitiveのセット
+				m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexView);
+				m_commandList->IASetIndexBuffer(&mesh->m_indexView);
+
+				// RootDescriptorのセット
+				m_commandList->SetGraphicsRootDescriptorTable(0, m_sceneCB.GetDescriptor(frameIndex).m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(1, meshMat->GetColorTexture().lock().get()->srv.m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(2, meshMat->GetDiffuseTexture().lock().get()->srv.m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(3, meshMat->GetNormalTexture().lock().get()->srv.m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(4, m_shadowMap->GetOutputDescriptor()->m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(5, m_sampler->GetDescriptor().m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(6, m_sceneShadowCB.GetDescriptor(frameIndex).m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(7, material->GetDescriptor(frameIndex));
+				m_commandList->SetGraphicsRootDescriptorTable(8, LightPool::GetInstance().GetDescriptor(frameIndex).m_gpuHandle);
+
+				// コマンドの発行
+				m_commandList->DrawIndexedInstanced(mesh->m_indexCount, 1, 0, 0, 0);
+			}
+		}
+
+		// どっかでまとめたいね
+		if (modelList != nullptr)
+		{
+			for (auto mesh : *modelList)
 			{
 				auto& material = MaterialManager::GetInstance().GetMaterial(mesh->m_materialId);
 				DefaultMeshMaterial* meshMat = static_cast<DefaultMeshMaterial*>(material.get());
@@ -817,9 +858,41 @@ void SimpleModelApp::RenderToMSAA()
 	// 一気にmeshを描いていく
 	{
 		auto meshList = MeshPool::GetInstance().GetMesh(m_fileName);
+		auto modelList = MeshPool::GetInstance().GetMesh(m_modelName);
 		if (meshList != nullptr)
 		{
 			for (auto mesh : *meshList)
+			{
+				auto& material = MaterialManager::GetInstance().GetMaterial(mesh->m_materialId);
+				DefaultMeshMaterial* meshMat = static_cast<DefaultMeshMaterial*>(material.get());
+
+				// PSOのセット
+				m_commandList->SetPipelineState(meshMat->GetIsAlpha() ? m_AlphaPsoContainer.GetPSO().Get() : m_psoContainer.GetPSO().Get());
+
+				// Primitiveのセット
+				m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexView);
+				m_commandList->IASetIndexBuffer(&mesh->m_indexView);
+
+				// RootDescriptorのセット
+				m_commandList->SetGraphicsRootDescriptorTable(0, m_sceneCB.GetDescriptor(frameIndex).m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(1, meshMat->GetColorTexture().lock().get()->srv.m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(2, meshMat->GetDiffuseTexture().lock().get()->srv.m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(3, meshMat->GetNormalTexture().lock().get()->srv.m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(4, m_shadowMap->GetOutputDepthDescriptor()->m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(5, m_sampler->GetDescriptor().m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(6, m_sceneShadowCB.GetDescriptor(frameIndex).m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(7, material->GetDescriptor(frameIndex));
+				m_commandList->SetGraphicsRootDescriptorTable(8, LightPool::GetInstance().GetDescriptor(frameIndex).m_gpuHandle);
+
+				// コマンドの発行
+				m_commandList->DrawIndexedInstanced(mesh->m_indexCount, 1, 0, 0, 0);
+			}
+		}
+
+		if (modelList != nullptr)
+		{
+			for (auto mesh : *modelList)
 			{
 				auto& material = MaterialManager::GetInstance().GetMaterial(mesh->m_materialId);
 				DefaultMeshMaterial* meshMat = static_cast<DefaultMeshMaterial*>(material.get());

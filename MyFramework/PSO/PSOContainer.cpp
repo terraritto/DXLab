@@ -40,6 +40,11 @@ void PSOContainer::SetPSByte(std::wstring filePath)
 	m_psoDesc.PS = psByte;
 }
 
+void PSOContainer::SetRTVFormat(int index, DXGI_FORMAT format)
+{
+	m_psoDesc.RTVFormats[index] = format;
+}
+
 void PSOContainer::SetCullMode(D3D12_CULL_MODE mode)
 {
 	m_psoDesc.RasterizerState.CullMode = mode;

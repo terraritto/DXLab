@@ -31,6 +31,9 @@ public:
 	void SetPSByte(D3D12_SHADER_BYTECODE& byte);
 	void SetPSByte(std::wstring filePath);
 
+	// RTVのフォーマットを設定
+	void SetRTVFormat(int index, DXGI_FORMAT format);
+
 	// Cullingのモード指定
 	void SetCullMode(D3D12_CULL_MODE mode);
 

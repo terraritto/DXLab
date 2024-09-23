@@ -50,7 +50,7 @@ float4 main(VSOutput In) : SV_TARGET
 	// shadow‚ð‘«‚·
 	// LightViewScreen‹óŠÔ‚Ö
     float4 LVP = mul(shadowParam.LVP, In.WorldPos);
-    float3 shadow = CalculateProjectionShadow(LVP, ShadowTexture, samp);
+    float3 shadow = CalculatePCFShadow(LVP, shadowParam.offset, ShadowTexture, samp);
     light *= shadow;
 
 	return float4(light.rgb, 1.0f);

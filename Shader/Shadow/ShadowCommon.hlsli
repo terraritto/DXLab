@@ -50,4 +50,40 @@ float3 CalculateDepthShadow(float4 LVP, Texture2D shadowTex, in SamplerState sam
     return shadow;
 }
 
+// PCF(Percentage Closer Filtering)シャドウ
+float3 CalculatePCFShadow(float4 LVP, float offset, Texture2D shadowTex, in SamplerState samp)
+{
+    // UV空間へ
+    float2 shadowUV = LVP.xy / LVP.w;
+    shadowUV *= float2(0.5f, -0.5f);
+    shadowUV += 0.5f;
+	
+    // LightScreenViewでのZ値
+    float zLVP = LVP.z / LVP.w;
+    
+    // shadowの判定
+    float3 shadow = 1.0f;
+    if (0.0f < shadowUV.x && shadowUV.x < 1.0f &&
+		0.0f < shadowUV.y && shadowUV.y < 1.0f)
+    {       
+        // 3x3でサンプル
+        float rate = 0.0f;
+        for (int i = -1; i <= 1; i++)
+        {
+            for (int j = -1; j <= 1; j++)
+            {
+                float2 texOffset = float2(i * offset, j * offset);
+                float shadowZ = shadowTex.Sample(samp, shadowUV + texOffset).r;
+                rate = lerp(rate, rate + 1.0f, zLVP > (shadowZ + 0.0001f)); // Depth Biasで不自然な影を消す
+            }
+        }
+        rate = rate / 9.0f; 
+
+        // filterに応じてlerp
+        shadow = lerp(1.0f, 0.5f, rate);
+    }
+    
+    return shadow;
+}
+
 #endif
