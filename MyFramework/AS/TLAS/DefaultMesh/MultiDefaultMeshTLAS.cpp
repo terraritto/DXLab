@@ -4,6 +4,7 @@
 #include "DefaultMeshTLAS.h"
 #include "../../../Material/MaterialManager.h"
 #include "../../../Material/DefaultMeshMaterial.h"
+#include "../../../Pool/TexturePool.h"
 
 void MultiDefaultMeshTLAS::AddTLAS(std::unique_ptr<DefaultMeshTLAS>& tlas)
 {
@@ -89,6 +90,12 @@ void MultiDefaultMeshTLAS::WriteShaderTableFromIndex(ComPtr<ID3D12StateObjectPro
 			{
 				dst += DXUTILITY::WriteGPUDescriptor(dst, meshMaterial->GetColorTexture().lock()->srv);
 				dst += DXUTILITY::WriteGPUDescriptor(dst, meshMaterial->GetNormalTexture().lock()->srv);
+			}
+			else
+			{
+				std::wstring dummy;
+				dst += DXUTILITY::WriteGPUDescriptor(dst, TexturePool::GetInstance().GetTexture(dummy).lock()->srv);
+				dst += DXUTILITY::WriteGPUDescriptor(dst, TexturePool::GetInstance().GetTexture(dummy, false, true).lock()->srv);
 			}
 		}
 

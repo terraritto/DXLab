@@ -25,7 +25,7 @@ int MaterialManager::AddMaterial(std::unique_ptr<MaterialBase>&& material)
 	// ’Ç‰Á‚ğs‚¤	
 	m_materialList.emplace_back(std::move(material));
 
-	// index‚ğ•Ô‚µ‚Ä‚¨‚­(Manager‚Å‚ÍindexŠÇ—‚Ís“à
+	// index‚ğ•Ô‚µ‚Ä‚¨‚­(Manager‚Å‚ÍindexŠÇ—‚Í‚µ‚È‚¢)
 	return static_cast<int>(m_materialList.size() - 1);
 }
 

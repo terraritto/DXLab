@@ -238,23 +238,23 @@ void PathTraceRenderer::Initialize()
 			// lambert‚ð—pˆÓ
 			auto lambertMat = std::make_unique<SelfDefMaterial>();
 			lambertMat->SetAlbedo(DirectX::XMVectorSet(0.718,0.483,0.000, 1.0f));
-			lambertMat->SetSpecular(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 100.0f));
+			lambertMat->SetSpecular(DirectX::XMVectorSet(0.5f, 0.5f, 0.5f, 0.1f));
 			lambertMat->SetReflectColor(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f));
-			lambertMat->SetEtaIn(1.0f);
+			lambertMat->SetEtaIn(0.5f);
 			lambertMat->SetEtaOut(1.0f);
 			lambertMat->SetMaterialName("Mori_BlinnPhong" + std::to_string(moriIndex));
-			lambertMat->SetBRDFType(BRDFType::PT_BlinnPhong);
+			lambertMat->SetBRDFType(BRDFType::PT_Test);
 			int lambertIndex = materialManager.AddMaterial(std::move(lambertMat));
 
 			// Phong‚ð—pˆÓ
 			auto phongMat = std::make_unique<SelfDefMaterial>();
 			phongMat->SetAlbedo(DirectX::XMVectorSet(0.718, 0.483, 0.000, 1.0f));
-			phongMat->SetSpecular(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 3.0f));
+			phongMat->SetSpecular(DirectX::XMVectorSet(0.5f, 0.5f, 0.5f, 0.4f));
 			phongMat->SetReflectColor(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f));
 			phongMat->SetEtaIn(0.5f);
 			phongMat->SetEtaOut(1.0f);
 			phongMat->SetMaterialName("Mori_Blinn" + std::to_string(moriIndex));
-			phongMat->SetBRDFType(BRDFType::PT_Blinn);
+			phongMat->SetBRDFType(BRDFType::PT_Test);
 			int phongIndex = materialManager.AddMaterial(std::move(phongMat));
 
 			auto lambertTlas = std::make_unique<DefaultMeshTLAS>();
@@ -461,7 +461,7 @@ void PathTraceRenderer::Update(double DeltaTime)
 			material->SetSpecular(vec3Data);
 
 			float floatData = material->GetSpecularPow();
-			ImGui::SliderFloat("shininess", &floatData, 0.0f, 1000.0f);
+			ImGui::SliderFloat("shininess", &floatData, 0.0f, 1.0f);
 			material->SetSpecularPow(floatData);
 
 			ImGui::TreePop();

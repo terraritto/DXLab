@@ -29,7 +29,7 @@ float3 Evaluate(const BRDFData brdf, const UtilData data, const float3 wi)
         break;
 
     case 3:
-        result = EvaluateBlinn(brdf, data, wi);
+        result = EvaluateCookTorrance(brdf, data, wi);
         break;
     }
     
@@ -55,7 +55,7 @@ float3 EvaluateSample(const BRDFData brdf, const UtilData data, out float3 wi, o
         break;
 
     case 3:
-        result = BlinnSample(brdf, data, wi, pdf);
+        result = CookTorranceSample(brdf, data, wi, pdf);
         break;
     }
     

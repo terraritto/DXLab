@@ -68,13 +68,10 @@ std::weak_ptr<DXUTILITY::TextureResource> TexturePool::GetTexture(std::wstring& 
         return data->second;
     }
 
-    if (isNormal )
+    if (isNormal)
     {
         return m_textureList[DUMMY_TEXTURE_NORMAL];
     }
 
     return m_textureList[isWhite ? DUMMY_TEXTURE_WHITE : DUMMY_TEXTURE_BLACK];
 }
-
-#undef DUMMY_TEXTURE_WHITE
-#undef DUMMY_TEXTURE_BLACK

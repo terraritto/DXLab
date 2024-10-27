@@ -18,6 +18,12 @@ struct LightData
 	LightParameter buffer[MAX_LIGHT_NUM];
 };
 
+/* Rim Light */
+float RimThreshold(float3 N, float3 V)
+{
+    return 1.0 - saturate(dot(V, N));
+}
+
 /* Point Light */
 float GetDistanceAttenuation(float3 lightVec)
 {

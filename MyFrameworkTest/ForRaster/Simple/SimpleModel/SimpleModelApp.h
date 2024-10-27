@@ -51,6 +51,7 @@ protected:
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	PSOContainer m_psoContainer;
 	PSOContainer m_AlphaPsoContainer;
+	PSOContainer m_rimContainer;
 
 	DXUTILITY::DynamicBuffer m_sceneCB, m_sceneShadowCB;
 	std::unique_ptr<DXUTILITY::SamplerDescriptor> m_sampler;

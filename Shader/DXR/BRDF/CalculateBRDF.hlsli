@@ -254,6 +254,84 @@ float3 EvaluateBlinn(const BRDFData brdf, const UtilData data, const float3 L)
 }
 // @Blinn End
 
+// @Cook-Torrance Start
+float3 CookTorranceSample(const BRDFData brdf, const UtilData data, out float3 L, out float pdf)
+{
+    // Sampleï˚å¸åvéZ
+    float3 u, v, w = data.normal;
+    OrthonormalBasis(u, v, w);
+
+    float3 sr = SampleHemisphere();
+    L = normalize(sr.r * u + sr.g * v + sr.b * w);
+    
+    float3 Lo = brdf.diffuse * INVPI;
+            
+    float3 V = -WorldRayDirection();
+    float3 H = normalize(L + V);
+    float3 N = data.normal;
+    
+    float NoH = dot(N, H);
+    float VoH = dot(V, H);
+    float NoL = dot(N, L);
+    float NoV = dot(N, V);
+    
+    // DçÄ
+    float m2 = brdf.specular.w * brdf.specular.w;
+    float cosTwo = NoH * NoH;
+    float cosFour = cosTwo * cosTwo;
+    float tanTerm = (1.0f - cosTwo) / cosTwo;
+    float D = (1.0f / (m2 * cosFour)) * exp((-1.0f / m2) * tanTerm);
+    
+    // GçÄ
+    float G = min(1.0f, 
+    min(2.0f * NoH * NoV / VoH, 
+    2.0f * NoH * NoL / VoH));
+
+    // FçÄ(Schlick Fresnel)
+    float3 F = brdf.specular.xyz + (1.0f - brdf.specular.xyz) * pow((1.0f - VoH), 5.0f);
+
+    Lo += saturate(D * G * F / (4.0f * NoV * NoL));
+    
+    pdf = D * NoL / (4.0 * dot(V, L));
+    
+    return Lo;
+}
+
+float3 EvaluateCookTorrance(const BRDFData brdf, const UtilData data, const float3 L)
+{
+    float3 Lo = brdf.diffuse * INVPI;
+    
+    float3 V = -WorldRayDirection();
+    float3 H = normalize(L + V);
+    float3 N = data.normal;
+    
+    float NoH = dot(N, H);
+    float VoH = dot(V, H);
+    float NoL = dot(N, L);
+    float NoV = dot(N, V);
+    
+        // DçÄ
+    float m2 = brdf.specular.w * brdf.specular.w;
+    float cosTwo = NoH * NoH;
+    float cosFour = cosTwo * cosTwo;
+    float tanTerm = (1.0f - cosTwo) / cosTwo;
+    float D = (1.0f / (m2 * cosFour)) * exp((-1.0f / m2) * tanTerm);
+    
+    // GçÄ
+    float G = min(1.0f,
+    min(2.0f * NoH * NoV / VoH,
+    2.0f * NoH * NoL / VoH));
+
+    
+    // FçÄ(Schlick Fresnel)
+    float3 F = brdf.specular.xyz + (1.0f - brdf.specular.xyz) * pow((1.0f - VoH), 5.0f);
+
+    Lo += saturate(D * G * F / (4.0f * NoV * NoL));
+            
+    return Lo;
+}
+// @Cook-Torrance End
+
 float3 GlossarySpecular(const BRDFData phong, const UtilData data, const float3 wi)
 {
     float3 L = float3(0.0f, 0.0f, 0.0f);

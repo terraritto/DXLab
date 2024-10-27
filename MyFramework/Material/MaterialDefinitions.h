@@ -12,5 +12,5 @@ enum class BRDFType
 	PT_Lambert = 0,
 	PT_Phong = 1,
 	PT_BlinnPhong = 2,
-	PT_Blinn = 3
+	PT_Test = 3,
 };

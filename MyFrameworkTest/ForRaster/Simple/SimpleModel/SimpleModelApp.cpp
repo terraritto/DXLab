@@ -145,7 +145,16 @@ void SimpleModelApp::Initialize()
 	m_AlphaPsoContainer.SetBlendData(data);
 	m_AlphaPsoContainer.CreatePSO(m_device->GetDevice());
 
-	// Post関係のPSOを政策
+	// Rim用
+	m_rimContainer.SetVSByte(L"SimpleModelVS.dxlib");
+	m_rimContainer.SetPSByte(L"RimPS.dxlib");
+	m_rimContainer.SetCullMode(D3D12_CULL_MODE_FRONT);
+	m_rimContainer.IsDepthClip(true);
+	m_rimContainer.SetRootSignature(m_rootSignature);
+	m_rimContainer.SetInputElement(inputElementDesc);
+	m_rimContainer.CreatePSO(m_device->GetDevice());
+
+	// Post関係のPSOを作成
 	std::unique_ptr<PostPSO> postPSO;
 	{
 		// Test
@@ -754,7 +763,7 @@ void SimpleModelApp::RenderToTexture()
 				DefaultMeshMaterial* meshMat = static_cast<DefaultMeshMaterial*>(material.get());
 
 				// PSOのセット
-				m_commandList->SetPipelineState(meshMat->GetIsAlpha() ? m_AlphaPsoContainer.GetPSO().Get() : m_psoContainer.GetPSO().Get());
+				m_commandList->SetPipelineState(meshMat->GetIsAlpha() ? m_AlphaPsoContainer.GetPSO().Get() : m_rimContainer.GetPSO().Get());
 
 				// Primitiveのセット
 				m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -898,7 +907,7 @@ void SimpleModelApp::RenderToMSAA()
 				DefaultMeshMaterial* meshMat = static_cast<DefaultMeshMaterial*>(material.get());
 
 				// PSOのセット
-				m_commandList->SetPipelineState(meshMat->GetIsAlpha() ? m_AlphaPsoContainer.GetPSO().Get() : m_psoContainer.GetPSO().Get());
+				m_commandList->SetPipelineState(meshMat->GetIsAlpha() ? m_AlphaPsoContainer.GetPSO().Get() : m_rimContainer.GetPSO().Get());
 
 				// Primitiveのセット
 				m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
