@@ -10,6 +10,7 @@
 #include "../../../MyFramework/Utility/Win32App.h"
 #include "../../../include/d3dx12.h"
 #include "../../../MyFramework/Pool/MeshPool.h"
+#include "../../../MyFramework/Utility/ShaderParamUtil.h"
 
 SimpleModelApp::SimpleModelApp(UINT width, UINT height)
 	: RenderInterface(width, height, L"SimpleTriangle")
@@ -194,6 +195,7 @@ void SimpleModelApp::Destroy()
 	m_sceneCB.UnInitialize(m_device);
 	m_sceneShadowCB.UnInitialize(m_device);
 	m_shadowCB.UnInitialize(m_device);
+	m_hemisphereSceneCB.UnInitialize(m_device);
 	
 	ImGui_ImplDX12_Shutdown();
 }
@@ -435,14 +437,17 @@ void SimpleModelApp::SetupMesh()
 void SimpleModelApp::SetupBuffer()
 {
 	// 定数バッファ関係の用意
-	m_sceneCB.Initialize(m_device, sizeof(ShaderParameters) + 255 & ~255);
+	m_sceneCB.Initialize(m_device, sizeof(ShaderParameters));
 	m_sceneCB.SetupBufferView(m_device);
 
-	m_sceneShadowCB.Initialize(m_device, sizeof(SceneShadowParameters) + 255 & ~255);
+	m_sceneShadowCB.Initialize(m_device, sizeof(SceneShadowParameters));
 	m_sceneShadowCB.SetupBufferView(m_device);
 
-	m_shadowCB.Initialize(m_device, sizeof(ShadowParameters) + 255 & ~255);
+	m_shadowCB.Initialize(m_device, sizeof(ShadowParameters));
 	m_shadowCB.SetupBufferView(m_device);
+
+	m_hemisphereSceneCB.Initialize(m_device, sizeof(ShaderHemisphereParameters));
+	m_hemisphereSceneCB.SetupBufferView(m_device);
 
 	// Samplerの用意
 	m_sampler = std::make_unique<DXUTILITY::SamplerDescriptor>();
@@ -687,6 +692,22 @@ void SimpleModelApp::RenderToTexture()
 		m_sceneShadowCB.Unmap(frameIndex);
 	}
 
+	{
+		ShaderHemisphereParameters hemisphereParams;
+		DirectX::XMStoreFloat4x4(&hemisphereParams.mtxWorld, Rotate);
+		DirectX::XMStoreFloat4x4(&hemisphereParams.mtxView, m_camera.GetViewMatrix());
+		DirectX::XMStoreFloat4x4(&hemisphereParams.mtxProj, m_camera.GetProjectionMatrix());
+		hemisphereParams.cameraParam = m_camera.GetPosition();
+		hemisphereParams.lightIndex = LightPool::GetInstance().GetLights().size();
+		hemisphereParams.skyColor = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 1.0f);
+		hemisphereParams.groundColor = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
+		hemisphereParams.groundNormal = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
+
+		void* p = m_hemisphereSceneCB.Map(frameIndex);
+		memcpy(p, &hemisphereParams, sizeof(ShaderHemisphereParameters));
+		m_hemisphereSceneCB.Unmap(frameIndex);
+	}
+
 	// RootSignatureのセット
 	m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
@@ -771,7 +792,7 @@ void SimpleModelApp::RenderToTexture()
 				m_commandList->IASetIndexBuffer(&mesh->m_indexView);
 
 				// RootDescriptorのセット
-				m_commandList->SetGraphicsRootDescriptorTable(0, m_sceneCB.GetDescriptor(frameIndex).m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(0, m_hemisphereSceneCB.GetDescriptor(frameIndex).m_gpuHandle);
 				m_commandList->SetGraphicsRootDescriptorTable(1, meshMat->GetColorTexture().lock().get()->srv.m_gpuHandle);
 				m_commandList->SetGraphicsRootDescriptorTable(2, meshMat->GetDiffuseTexture().lock().get()->srv.m_gpuHandle);
 				m_commandList->SetGraphicsRootDescriptorTable(3, meshMat->GetNormalTexture().lock().get()->srv.m_gpuHandle);
@@ -915,7 +936,7 @@ void SimpleModelApp::RenderToMSAA()
 				m_commandList->IASetIndexBuffer(&mesh->m_indexView);
 
 				// RootDescriptorのセット
-				m_commandList->SetGraphicsRootDescriptorTable(0, m_sceneCB.GetDescriptor(frameIndex).m_gpuHandle);
+				m_commandList->SetGraphicsRootDescriptorTable(0, m_hemisphereSceneCB.GetDescriptor(frameIndex).m_gpuHandle);
 				m_commandList->SetGraphicsRootDescriptorTable(1, meshMat->GetColorTexture().lock().get()->srv.m_gpuHandle);
 				m_commandList->SetGraphicsRootDescriptorTable(2, meshMat->GetDiffuseTexture().lock().get()->srv.m_gpuHandle);
 				m_commandList->SetGraphicsRootDescriptorTable(3, meshMat->GetNormalTexture().lock().get()->srv.m_gpuHandle);

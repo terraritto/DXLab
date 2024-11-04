@@ -1,5 +1,6 @@
-#ifndef __COMMON_DXR__
-#define __COMMON_DXR__
+#ifndef __COMMON_DX12__
+#define __COMMON_DX12__
+#include "DXR/BRDF/BRDFData.hlsli"
 
 // 頂点関係
 struct VSInput
@@ -50,16 +51,6 @@ struct ShadowParameter
     float4x4 proj;
 };
 
-// マテリアル関係
-struct EncodeData
-{
-    float4 parameter1;
-    float4 parameter2;
-    float4 parameter3;
-    float4 parameter4;
-    int index;
-};
-
 struct MaterialParameter
 {
 	float4 albedo;
@@ -73,5 +64,19 @@ void Decode(const EncodeData Encode, inout MaterialParameter Decode)
     Decode.albedo.w = Encode.parameter1.w;
     Decode.specular = Encode.parameter3;	
 }
+
+// Specific
+// Hemisphere Lightのためのパラメータ
+struct HemisphereLightShaderParameter
+{
+    float4x4 world;
+    float4x4 view;
+    float4x4 proj;
+    float4 cameraPos;
+    float4 skyColor;
+    float4 groundColor;
+    float4 groundNormal;
+    int lightIndex;
+};
 
 #endif

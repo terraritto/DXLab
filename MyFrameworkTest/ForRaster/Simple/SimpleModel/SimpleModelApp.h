@@ -20,28 +20,6 @@ public:
 	virtual void Update(double DeltaTime) override;
 	virtual void OnRender() override;
 
-	struct ShaderParameters
-	{
-		XMFLOAT4X4 mtxWorld;
-		XMFLOAT4X4 mtxView;
-		XMFLOAT4X4 mtxProj;
-		XMVECTOR cameraParam;
-		int lightIndex;
-	};
-
-	struct SceneShadowParameters
-	{
-		XMFLOAT4X4 LVP;
-		float offset = 0.1f;
-	};
-
-	struct ShadowParameters
-	{
-		XMFLOAT4X4 mtxWorld;
-		XMFLOAT4X4 mtxView;
-		XMFLOAT4X4 mtxProj;
-	};
-
 protected:
 	std::unique_ptr<DefaultMeshLoader> m_meshLoader;
 	std::wstring m_fileName, m_modelName;
@@ -55,6 +33,9 @@ protected:
 
 	DXUTILITY::DynamicBuffer m_sceneCB, m_sceneShadowCB;
 	std::unique_ptr<DXUTILITY::SamplerDescriptor> m_sampler;
+
+	// Hemisphere Light—p
+	DXUTILITY::DynamicBuffer m_hemisphereSceneCB;
 
 protected:
 	// Shadow—p

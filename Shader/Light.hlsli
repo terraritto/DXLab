@@ -2,6 +2,7 @@
 #define __Light__
 
 #include "Constant.hlsli"
+#include "CommonDX12.hlsli"
 
 // ƒ‰ƒCƒgŠÖŒW
 struct LightParameter
@@ -22,6 +23,14 @@ struct LightData
 float RimThreshold(float3 N, float3 V)
 {
     return 1.0 - saturate(dot(V, N));
+}
+
+/* Hemisphere Light */
+float3 CalculateHemisphereLight(float3 N, HemisphereLightShaderParameter param)
+{
+    float t = dot(normalize(param.groundNormal.xyz), N);
+	t = (t + 1.0f) * 0.5f;
+    return lerp(param.groundColor.xyz, param.skyColor.xyz, t);
 }
 
 /* Point Light */

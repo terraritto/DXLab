@@ -3,13 +3,14 @@
 #include "../../../../Shader/Constant.hlsli"
 #include "../../../../Shader/Light.hlsli"
 #include "../../../../Shader/Shadow/ShadowCommon.hlsli"
+#include "../../../../Shader/DXR/BRDF/BRDFData.hlsli"
 
 Texture2D ColorTexture : register(t0);
 Texture2D DiffuseTexture : register(t1);
 Texture2D NormalTexture : register(t2);
 Texture2D ShadowTexture : register(t3);
 SamplerState samp : register(s0);
-ConstantBuffer<ShaderParameter> sceneParam : register(b0);
+ConstantBuffer<HemisphereLightShaderParameter> sceneParam : register(b0);
 ConstantBuffer<SceneShadowParameter> shadowParam : register(b1);
 ConstantBuffer<EncodeData> mat : register(b2);
 ConstantBuffer<LightData> lightBuffer : register(b3);
@@ -17,6 +18,7 @@ ConstantBuffer<LightData> lightBuffer : register(b3);
 float4 main(VSOutput In) : SV_TARGET
 {
 	float3 N = NormalTexture.Sample(samp, In.UV).xyz * 2.0f - 1.0f;
+	N = mul(In.TangentBasis, N);
 	float3 V = normalize(sceneParam.cameraPos.xyz - In.WorldPos.xyz);
 	V = mul(In.TangentBasis, V);
 	float3 R = normalize(reflect(V, N));
@@ -44,16 +46,14 @@ float4 main(VSOutput In) : SV_TARGET
 	}
 
 	// ambient‚ğ‘«‚·
-	light += color.rgb * 0.8f;
-
-	// Rim‚ÅÔF‚ğo‚µ‚Ä‚İ‚é
-	light.rgb += float3(1.0f, 0.0f, 0.0f) * RimThreshold(N, V);
+	// light = color.rgb * 0.8f;
+	light = CalculateHemisphereLight(N, sceneParam);
 
 	// shadow‚ğ‘«‚·
 	// LightViewScreen‹óŠÔ‚Ö
 	float4 LVP = mul(shadowParam.LVP, In.WorldPos);
-	float3 shadow = CalculateDepthShadow(LVP, shadowParam.offset, ShadowTexture, samp);
-	light *= shadow;
+	float3 shadow = CalculatePCFShadow(LVP, shadowParam.offset, ShadowTexture, samp);
+	//light *= shadow;
 
-	return float4(light.rgb, 1.0f);
+	return float4(light.xyz, 1.0f);
 }

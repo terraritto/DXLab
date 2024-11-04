@@ -9,6 +9,7 @@ using XMFLOAT2 = DirectX::XMFLOAT2;
 using XMFLOAT3 = DirectX::XMFLOAT3;
 using XMFLOAT4 = DirectX::XMFLOAT4;
 using XMFLOAT3X4 = DirectX::XMFLOAT3X4;
+using XMFLOAT4X4 = DirectX::XMFLOAT4X4;
 using XMMATRIX = DirectX::XMMATRIX;
 
 // ComPtr

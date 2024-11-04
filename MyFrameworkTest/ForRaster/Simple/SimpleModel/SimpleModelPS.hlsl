@@ -17,6 +17,7 @@ ConstantBuffer<LightData> lightBuffer : register(b3);
 float4 main(VSOutput In) : SV_TARGET
 {
 	float3 N = NormalTexture.Sample(samp, In.UV).xyz * 2.0f - 1.0f;
+	N = mul(In.TangentBasis, N);
 	float3 V = normalize(sceneParam.cameraPos.xyz - In.WorldPos.xyz);
 	V = mul(In.TangentBasis, V);
 	float3 R = normalize(reflect(V, N));
@@ -40,7 +41,6 @@ float4 main(VSOutput In) : SV_TARGET
 		float LoR = saturate(dot(L, R));
 
 		float3 brdf = BlinnPhongBRDF(materialParam, 0.5f, NoH);
-		//float3 brdf = PhongBRDF(materialParam, 0.5f, LoR); // todo: metallic‚ð“n‚¹‚é‚æ‚¤‚É
 		light += EvaluateLight(N, In.WorldPos.xyz, lightBuffer.buffer[i]) * brdf * diffuse.rgb;
 	}
 
